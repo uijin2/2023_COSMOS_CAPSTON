@@ -2,13 +2,12 @@
 import threading
 import sys
 import socket
-from CAD.Plan.Planner import Planner
-from CAD.Tello.Tello8889Sensor import Tello8889Sensor
-from CAD.Tello.Tello11111Sensor import Tello11111Sensor
-from CAD.Tello.Tello8889Actor import Tello8889Actor
-from CAD.Test.TelloVirtualController import TelloVirtualController
+from COSMOS.Plan.Planner import Planner
+from COSMOS.Sensor.Tello8890Sensor import Tello8890Sensor
+from COSMOS.Sensor.Tello11111Sensor import Tello11111Sensor
+from COSMOS.Sensor.Tello8889Actor import Tello8889Actor
+from COSMOS.Test.TelloVirtualController import TelloVirtualController
 import os
-
 
 
 """
@@ -48,7 +47,6 @@ class Main:
         
         #Tello의 주소, 포트
         self.tello_address = ('192.168.10.1',8889) #텔로에게 접속했을 때, 텔로의 IP주소
-        # self.tello_address = ('192.168.137.198',8889) #텔로에게 접속했을 때, 텔로의 IP주소
         
         #비행상태 확인을 위한 변수
         self.is_takeoff = False
@@ -74,8 +72,11 @@ class Main:
         self.socket11111 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # IPv4, UDP 통신 소켓 객체를 생성(camera용)
         self.socket11111.bind(('', 11111)) #소켓 객체를 텔로와 바인딩(11111 포트)
 
+        self.socket8890 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # IPv4, UDP 통신 소켓 객체를 생성(ToF sensor용)
+        self.socket8890.bind(('', 8890)) #소켓 객체를 텔로와 바인딩(8890 포트)
+
         
-        self.socket8889.sendto("downvision 0".encode('utf-8'), self.tello_address)
+        self.socket8889.sendto("downvision 1".encode('utf-8'), self.tello_address)
         
         
         print("드론 연결 완료")
@@ -83,7 +84,7 @@ class Main:
         #객체 생성
         self.planner = Planner(self)
         
-        self.tello8889sensor = Tello8889Sensor(self)
+        self.tello8890sensor = Tello8890Sensor(self)
         self.tello11111sensor = Tello11111Sensor(self)
         self.tello8889actor = Tello8889Actor(self)
         
