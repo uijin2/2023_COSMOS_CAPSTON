@@ -1,55 +1,40 @@
 #완성
-import threading
+from threading import Thread
+from ackermann_msgs.msg import AckermannDriveStamped
 import sys
 import socket
+import rospy
+import time
 from COSMOS.Plan.Planner import Planner
 from COSMOS.Sensor.Tello8890Sensor import Tello8890Sensor
 from COSMOS.Sensor.Tello11111Sensor import Tello11111Sensor
 from COSMOS.Sensor.Tello8889Actor import Tello8889Actor
 from COSMOS.Test.TelloVirtualController import TelloVirtualController
+from COSMOS.Donkey.PCA9685 import PCA9685
 import os
 
-
-"""
-- Architecture: Sense - Plan - Act Pattern
-
-- 입력방식(유선, 무선 및 포트)에 따라 Sense 계열 클래스 생성
-- 연산을 담당하는 Planner 클래스 생성
-- 출력방식(유선, 무선 및 포트)에 따라 Act 계열 클래스 생성
-
-- Sense 계열 클래스들은 
-    1) 데이터를 가져오고'
-    2) 데이터를 Planner가 받아들일 수 있는 정보로 변경하고V2
-    3) Planner에 저장
-    
-- Planner 클래스는
-    1) 저장된 값을 원하는 정보로 가공(3차원 좌표값으로 변경)하고
-    2) 가공한 정보를 바탕으로 회피 명령을 생성하고  n /
-    3) 생성된 명령을 Planner 내부에 저장
-    
-- Act 계열 클래스들은 
-    1) Planner에 저장된 값을 가져와서
-    2) Drone이 이해할 수 있는 값으로 변경하고
-    2) Actuator로 전송
-
-- 이 모든 과정은 순차적이 아닌 병렬적으로 수행(사용자 명령이 존재하기 때문)
-"""
-
-class Main:
+class Main(object):
     
     def __init__(self):
 
-        #os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
         print(">>> 프로그램 준비중...")
         #종료를 위한 stop_event
-        self.stop_event = threading.Event()
+        self.stop_event = Thread.Event()
         
         #Tello의 주소, 포트
         self.tello_address = ('192.168.10.1',8889) #텔로에게 접속했을 때, 텔로의 IP주소
         
         #비행상태 확인을 위한 변수
         self.is_takeoff = False
+
+        print("차량 연결 대기종...")
+
+        self._throttle = PCA9685(channel=0, busnum=1)
+        self._steering_servo = PCA9685(channel=1, busnum=1) 
+
+        print("차량 연결 완료")
+
         
         #연결 정의
         print("드론 연결 대기중...")
@@ -97,12 +82,16 @@ class Main:
 
         
 
-
-
 if __name__ == "__main__":
     version = sys.version.split(".")
     if version[0] == "3" and version[1] == "9":
-        Main()
+        rospy.init_node("donkey_control")
+
+        myCar = Main("donkey_ros")
+
+        rate = rospy.Rate(10)
+        while not rospy.is_shutdown():
+            rate.sleep()
     else:
         print(">>>파이썬 3.9만 지원됩니다.")
         print(">>>현재 버젼: {}".format(sys.version))
