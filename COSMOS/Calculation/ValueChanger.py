@@ -3,8 +3,6 @@
 값을 변환하는 함수에 대한 모듈
 """
 
-
-
 #입력값(mm)을 cm단위로 변환
 def change_mm_to_cm(val:int):
     return int(val/10)
@@ -32,21 +30,6 @@ def change_val_to_coor(object_val):
     if tof_val is None:
         return None
  
-    # #윈도우 좌표가 전달되지 않은 경우, 윈도우를 무시하고 최대크기로 지정
-    # if object_val is None or object_val[1] is None or object_val[1]==(None,None) or \
-    #     object_val[2] is None or object_val[2]==(None,None):
-
-    #     real_length_x = 1000
-    #     real_length_y = 1000  
-    #     real_center_coor_x = 0
-    #     real_center_coor_y = 0
-        
-    #     real_length = (real_length_x , real_length_y)    
-    #     real_center_coor = (real_center_coor_x, real_center_coor_y)
-
-    #     #리턴값 생성 / object_coor: (tof값[cm], 물체 중앙 좌표[cm], 물체 길이[cm])
-    #     object_coor = (tof_val, real_center_coor, real_length)
-    #     return object_coor
     
     #[윈도우 좌표계] 윈도우의 좌상단, 우하단 점, 스크린 크기에 대한 좌표값: (x,y)
     window_left_up_coor = object_val[1][0]
@@ -253,32 +236,3 @@ def change_windows_to_window(window_coor_list:list, ir_left_up_coor: tuple, ir_r
     return fusion_window
 
 
-#충돌이 발생하지 않는 명령으로 변환
-def change_to_safe_cmd(cmd:str, tof:int, threshold:int):
-    
-    if cmd is None:
-        return None
-
-    cmd_list = cmd.split(" ")
-    
-    #어차피 전방에 대해서만 장애물 감지가 가능하기 때문에, 전방이동만 고려하면 됨
-    if cmd_list[0] !="forward":
-        return cmd
-
-    #장애물까지 남은 안정거리
-    rest_safe_distance = tof - threshold
-    
-    #이동하고자 하는 거리
-    move_distance = int(cmd_list[1])
-    
-    
-    #계산된 거리
-    new_move_distance = rest_safe_distance - move_distance
-    if tof >= 1000:
-        new_move_distance = move_distance
-        return "forward {}".format(new_move_distance)
-        
-    if new_move_distance < 20:
-        return "stop"
-
-    return "forward {}".format(new_move_distance)

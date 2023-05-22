@@ -50,7 +50,7 @@ class TelloVirtualController:
         self.root = tkinter.Tk()  # GUI 화면 객체 생성
         self.root.geometry("-10+0")
         # self.root.attributes('-fullscreen',True)
-        self.root.wm_title("COSMOS TEST for RMTT") #GUI 화면의 title 설정  
+        self.root.wm_title("CAD TEST for RMTT") #GUI 화면의 title 설정  
         self.root.wm_protocol("WM_DELETE_WINDOW", self.__onClose) #종료버튼을 클릭시 실행할 함수 설정
 
         #화면에 띄울 문구 설정
@@ -177,7 +177,7 @@ class TelloVirtualController:
         self.__printf("실행",sys._getframe().f_code.co_name)
         try:
             while not self.__thread_stop_event.is_set():
-                tof = self.__planner.get_info_8890Sensor_tof()
+                tof = self.__planner.get_info_8889Sensor_tof()
                 self.__text_tof.config(text = "ToF: {} cm".format(tof))
                 sleep(self.__renewal_tof_time)
         except Exception as e:
@@ -226,16 +226,8 @@ class TelloVirtualController:
         except Exception as e:
             self.__printf("ERROR {}".format(e),sys._getframe().f_code.co_name)
             print(traceback.format_exc())
-        # self.__lock.release() #락 해제
 
-    # def insert_controller_queue(self,cmd):
-    #     self.__controller_queue.append(cmd)
-    
-    # def pop_controller_queue(self):
-    #     data = None
-    #     if len(self.__controller_queue)>0:
-    #         data = self.__controller_queue.pop(0)
-    #     return data
+
     def insert_controller_queue(self,cmd):
         self.__planner.insert_cmd_queue(cmd)
     

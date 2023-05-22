@@ -4,8 +4,9 @@ import sys
 import traceback
 from time import sleep
 from COSMOS.Calculation import ValueChanger
-from COSMOS.ObjectDetector.YOLOv8 import YOLOv8
+from COSMOS.ObjectDetector.YOLOv5 import YOLOv5
 from numpy import *
+import cv2
 
 
 
@@ -24,7 +25,6 @@ class Planner:
     def __init__(self, main):
         self.__printc("생성")
         
-        self.endtime = 0
         #종료를 위한 stop_event
         self.__stop_event = main.stop_event
         
@@ -32,7 +32,7 @@ class Planner:
         self.socket8889 = main.socket8889
         self.tello_address = main.tello_address
         
-        self.model_path = "../models/yolov8m.onnx"
+        
         self.threshold_distance = 60
         
         #종료를 위한 virtual controller 접근
@@ -46,6 +46,7 @@ class Planner:
         
         #각 센서가 저장하는 값
         self.__cmd_queue = [] #명령을 저장할 큐
+
         self.__info_8889Sensor_tof = None #ToF
         self.__info_8889Sensor_cmd = None #수행확인명령
         self.__info_11111Sensor_frame = None #Frame
@@ -53,13 +54,16 @@ class Planner:
         self.__info_11111Sensor_coor = None
         
         #객체감지를 위한 YOLOv5 객체
-        self.__YOLOv8 = YOLOv8(self)
+        self.__YOLOv5 = YOLOv5(self)
         
+                
         
         #스레드 실행
         self.__thr_planner = threading.Thread(target=self.__func_planner, daemon=True)
         self.__thr_planner.start()
         
+        self.__thr_sensor = threading.Thread(target=self.__func_sensor, daemon=True)
+        self.__thr_sensor.start()
         
         self.__thr_stay_connection = threading.Thread(target=self.__func_stay_connection, daemon=True)
         self.__thr_stay_connection.start()
@@ -73,7 +77,6 @@ class Planner:
     #메인 스레드
     def __func_planner(self):
         self.__printf("실행",sys._getframe().f_code.co_name)
-        thr_send = threading.Thread(target=self.__func_send,daemon=True)
         
         try:
             while not self.__stop_event.is_set() and not hasattr(self.__main, 'virtual_controller'):
@@ -84,7 +87,6 @@ class Planner:
                 
             while not self.__stop_event.is_set():
                 #1) frame 정보가 존재하면, frame에 대해 장애물 윈도우를 그리기
-                
                 frame, tof, object_coor =  self.__redraw_frame() #좌표받아오기
                 
                 #2) 장애물이 인지된 상태이고, 안정범위를 침범한 경우
@@ -93,12 +95,12 @@ class Planner:
                     screen_size = (frame.shape[1], frame.shape[0])
                     real_coor = self.__create_real_coor(object_coor, tof, screen_size)                        
                     
-                    print('___Object information___', real_coor)
-                    
+                    print('___Object information__',real_coor)
+
                     self.insert_cmd_queue("land")
                     sleep(0.5)
                     self.insert_cmd_queue("stop")
-
+                    
         except Exception as e:
             self.__printf("ERROR {}".format(e),sys._getframe().f_code.co_name)
             print(traceback.format_exc())
@@ -112,10 +114,36 @@ class Planner:
             self.__printf("ERROR {}".format(e),sys._getframe().f_code.co_name)
             print(traceback.format_exc())
     
-    def __func_send(self):
-            self.insert_cmd_queue(self.__avd_cmd)
-            sleep(0.5)
-            self.insert_cmd_queue("stop")
+    
+    
+    #frame을 받아오는 스레드
+    def __func_sensor(self):
+        self.__printf("실행",sys._getframe().f_code.co_name)
+        try:
+            while not self.__stop_event.is_set() and not hasattr(self.__main, 'virtual_controller'):
+                self.__printf("대기중",sys._getframe().f_code.co_name)
+                sleep(1)
+            
+            self.__virtual_controller = self.__main.virtual_controller
+            cap = cv2.VideoCapture("udp://"+self.tello_address[0]+":"+"11111")
+            
+            while not self.__stop_event.is_set():
+                ret, frame = cap.read()
+                self.set_info_11111Sensor_frame(frame)
+                cv2.waitKey(10)
+
+        except Exception as e:
+            self.__printf("ERROR {}".format(e),sys._getframe().f_code.co_name)
+            print(traceback.format_exc())
+        
+        self.__printf("종료",sys._getframe().f_code.co_name)
+        
+        #virtual controller 종료
+        try:
+            self.__virtual_controller.onClose()
+        except Exception as e:
+            self.__printf("ERROR {}".format(e),sys._getframe().f_code.co_name)
+            print(traceback.format_exc())
             
             
     #Tello에게 15초 간격으로 command를 전송하는 함수
@@ -125,7 +153,7 @@ class Planner:
         Tello는 15초 이상 전달받은 명령이 없을시 자동 착륙하기 때문에,
         이를 방지하기 위해 5초 간격으로 Tello에게 "command" 명령을 전송
         """
-
+        cnt = 0
         try:
             while not self.__stop_event.is_set():
                 self.socket8889.sendto("command".encode(),self.tello_address)
@@ -152,6 +180,7 @@ class Planner:
         """
         try:
             while not self.__stop_event.is_set():
+                # self.insert_cmd_queue('EXT tof?')
                 self.socket8889.sendto("EXT tof?".encode(),self.tello_address)
                 sleep(0.2)
 
@@ -171,11 +200,11 @@ class Planner:
     
     def __redraw_frame(self):
         frame = self.get_info_11111Sensor_frame()
-        tof = self.get_info_8890Sensor_tof()
+        tof = self.get_info_8889Sensor_tof()
         
         if frame is not None and frame.size != 0:     
             #YOLO에 frame을 전달하여, 객체인식이 적용된 이미지를 전달받음
-            image, object_coor = self.__YOLOv8.detect_from_frame(frame, tof)
+            image, object_coor = self.__YOLOv5.detect_from_frame(frame, tof)
             
             #전달받은 값들을 저장
             self.set_info_11111Sensor_image(image)
@@ -189,7 +218,6 @@ class Planner:
         object_val = (tof, object_coor, screen_size) 
         object_coor = ValueChanger.change_val_to_coor(object_val)
         return object_coor
-
         
     
     #=====getter/setter 선언=====
@@ -206,14 +234,14 @@ class Planner:
         self.__cmd_queue.append(info)
         # self.__lock_cmd_queue.release()
         
-    #8890Sensor_tof   
-    def get_info_8890Sensor_tof(self):
+    #8889Sensor_tof   
+    def get_info_8889Sensor_tof(self):
         # self.__lock_info_8889Sensor_tof.acquire()
         info = self.__info_8889Sensor_tof
         # self.__lock_info_8889Sensor_tof.release()
         return info
     
-    def set_info_8890Sensor_tof(self, info):
+    def set_info_8889Sensor_tof(self, info):
         # self.__lock_info_8889Sensor_tof.acquire()
         self.__info_8889Sensor_tof = info
         # self.__lock_info_8889Sensor_tof.release()

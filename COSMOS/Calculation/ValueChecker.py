@@ -6,10 +6,11 @@
 
 
 #입력값이 Tello ToF 범위(0~8192)의 값이 맞는지 확인
-def is_tof_val(val:int):
+def is_tof_val(val:str):
     
-    if val:
-        int_val = int(val)
+    val_list = val.split()
+    if val_list[0] == 'tof' and val_list[-1].isdigit():
+        int_val = int(val_list[-1])
         if 0 <= int_val <= 8192:
             return True
         else:
