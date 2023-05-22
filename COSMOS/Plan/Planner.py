@@ -47,7 +47,8 @@ class Planner:
         #각 센서가 저장하는 값
         self.__cmd_queue = [] #명령을 저장할 큐
 
-        self.__info_8889Sensor_tof = None #ToF
+        self.__info_8890Sensor_tof = None #Tof (8890)
+        self.__info_8889Sensor_tof = None #ToF (8889)
         self.__info_8889Sensor_cmd = None #수행확인명령
         self.__info_11111Sensor_frame = None #Frame
         self.__info_11111Sensor_image = None
@@ -200,7 +201,8 @@ class Planner:
     
     def __redraw_frame(self):
         frame = self.get_info_11111Sensor_frame()
-        tof = self.get_info_8889Sensor_tof()
+        #tof = self.get_info_8889Sensor_tof()
+        tof = self.get_info_8890Sensor_tof()
         
         if frame is not None and frame.size != 0:     
             #YOLO에 frame을 전달하여, 객체인식이 적용된 이미지를 전달받음
@@ -246,7 +248,18 @@ class Planner:
         self.__info_8889Sensor_tof = info
         # self.__lock_info_8889Sensor_tof.release()
         
-        
+    #8890Sensor_tof   
+    def get_info_8890Sensor_tof(self):
+        # self.__lock_info_8889Sensor_tof.acquire()
+        info = self.__info_8890Sensor_tof
+        # self.__lock_info_8889Sensor_tof.release()
+        return info
+    
+    def set_info_8890Sensor_tof(self, info):
+        # self.__lock_info_8889Sensor_tof.acquire()
+        self.__info_8890Sensor_tof = info
+        # self.__lock_info_8889Sensor_tof.release()
+
     #8889Sensor_cmd
     def get_info_8889Sensor_cmd(self):
         # self.__lock_info_8889Sensor_cmd.acquire()

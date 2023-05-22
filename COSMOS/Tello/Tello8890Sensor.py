@@ -38,7 +38,7 @@ class Tello8890Sensor(Sensor):
             
             while not self.__stop_event.is_set():
                 data = self.take_data_from_sensor()
-                info = self.change_data_to_info(data)   
+                info = self.change_data_to_info(data) 
                 self.save_to_planner(info)
                     
         except Exception as e:

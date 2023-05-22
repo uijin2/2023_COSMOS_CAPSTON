@@ -177,7 +177,7 @@ class TelloVirtualController:
         self.__printf("실행",sys._getframe().f_code.co_name)
         try:
             while not self.__thread_stop_event.is_set():
-                tof = self.__planner.get_info_8889Sensor_tof()
+                tof = self.__planner.get_info_8890Sensor_tof()
                 self.__text_tof.config(text = "ToF: {} cm".format(tof))
                 sleep(self.__renewal_tof_time)
         except Exception as e:

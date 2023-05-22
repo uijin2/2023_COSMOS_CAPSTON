@@ -5,13 +5,25 @@
 
 
 
-#입력값이 Tello ToF 범위(0~8192)의 값이 맞는지 확인
+#입력값이 Tello ToF 범위(0~8192)의 값이 맞는지 확인 - 8889
+"""
 def is_tof_val(val:str):
     
     val_list = val.split()
     if val_list[0] == 'tof' and val_list[-1].isdigit():
         int_val = int(val_list[-1])
         if 0 <= int_val <= 8192:
+            return True
+        else:
+            return False
+    else:
+        return False
+"""
+
+#입력값이 Tello ToF 범위(0~8192)의 값이 맞는지 확인 - 8890 
+def is_tof_val(val:int):
+    if val:
+        if 0 <= int(val) <= 8192:
             return True
         else:
             return False
